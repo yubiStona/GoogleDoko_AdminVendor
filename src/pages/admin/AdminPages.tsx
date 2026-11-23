@@ -3598,8 +3598,8 @@ export function AdminSettings() {
       support_email: "support@googledoko.com",
       announcement_banner: "",
       announcement_active: true,
-      landing_food_image: "/landing-assets/food.png",
-      landing_lifestyle_image: "/landing-assets/lifestyle.jpg",
+      landing_food_image: "/landing-assets/food-photo.jpg",
+      landing_lifestyle_image: "/landing-assets/lifestyle-photo.jpg",
     },
   });
 
@@ -3613,8 +3613,12 @@ export function AdminSettings() {
         support_email: state.data.support_email,
         announcement_banner: state.data.announcement_banner,
         announcement_active: Boolean(state.data.announcement_active),
-        landing_food_image: state.data.landing_food_image || "/landing-assets/food.png",
-        landing_lifestyle_image: state.data.landing_lifestyle_image || "/landing-assets/lifestyle.jpg",
+        landing_food_image: !state.data.landing_food_image || state.data.landing_food_image === "/landing-assets/food.png"
+          ? "/landing-assets/food-photo.jpg"
+          : state.data.landing_food_image,
+        landing_lifestyle_image: !state.data.landing_lifestyle_image || state.data.landing_lifestyle_image === "/landing-assets/lifestyle.jpg"
+          ? "/landing-assets/lifestyle-photo.jpg"
+          : state.data.landing_lifestyle_image,
       });
     }
   }, [state.data, resetSettings]);
@@ -3631,8 +3635,8 @@ export function AdminSettings() {
           support_email: data.support_email,
           announcement_banner: data.announcement_banner || "",
           announcement_active: Boolean(data.announcement_active),
-          landing_food_image: data.landing_food_image || "/landing-assets/food.png",
-          landing_lifestyle_image: data.landing_lifestyle_image || "/landing-assets/lifestyle.jpg",
+          landing_food_image: data.landing_food_image || "/landing-assets/food-photo.jpg",
+          landing_lifestyle_image: data.landing_lifestyle_image || "/landing-assets/lifestyle-photo.jpg",
         }),
       );
       showToast("Marketplace operational settings updated successfully");
