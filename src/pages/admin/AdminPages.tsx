@@ -3571,6 +3571,7 @@ const settingsSchema = yup.object({
   announcement_active: yup.boolean().default(true),
   landing_food_image: yup.string().default("").trim(),
   landing_lifestyle_image: yup.string().default("").trim(),
+  landing_background_image: yup.string().default("").trim(),
 });
 
 type SettingsFormData = yup.InferType<typeof settingsSchema>;
@@ -3579,7 +3580,7 @@ export function AdminSettings() {
   const state = useData<PlatformSettings>(api.adminSettings);
   const { showToast } = useAccount();
   const [saving, setSaving] = useState(false);
-  const [uploadingLandingImage, setUploadingLandingImage] = useState<"food" | "lifestyle" | null>(null);
+  const [uploadingLandingImage, setUploadingLandingImage] = useState<"background" | "food" | "lifestyle" | null>(null);
 
   const {
     register: registerSettings,
@@ -3598,8 +3599,9 @@ export function AdminSettings() {
       support_email: "support@googledoko.com",
       announcement_banner: "",
       announcement_active: true,
-      landing_food_image: "/landing-assets/food-photo.jpg",
-      landing_lifestyle_image: "/landing-assets/lifestyle-photo.jpg",
+      landing_food_image: "/landing-assets/food-card-scene.jpg",
+      landing_lifestyle_image: "/landing-assets/lifestyle-card-scene.jpg",
+      landing_background_image: "/landing-assets/landing-background.jpg",
     },
   });
 
@@ -3613,12 +3615,13 @@ export function AdminSettings() {
         support_email: state.data.support_email,
         announcement_banner: state.data.announcement_banner,
         announcement_active: Boolean(state.data.announcement_active),
-        landing_food_image: !state.data.landing_food_image || state.data.landing_food_image === "/landing-assets/food.png"
-          ? "/landing-assets/food-photo.jpg"
+        landing_food_image: !state.data.landing_food_image || state.data.landing_food_image === "/landing-assets/food.png" || state.data.landing_food_image === "/landing-assets/food-photo.jpg"
+          ? "/landing-assets/food-card-scene.jpg"
           : state.data.landing_food_image,
-        landing_lifestyle_image: !state.data.landing_lifestyle_image || state.data.landing_lifestyle_image === "/landing-assets/lifestyle.jpg"
-          ? "/landing-assets/lifestyle-photo.jpg"
+        landing_lifestyle_image: !state.data.landing_lifestyle_image || state.data.landing_lifestyle_image === "/landing-assets/lifestyle.jpg" || state.data.landing_lifestyle_image === "/landing-assets/lifestyle-photo.jpg"
+          ? "/landing-assets/lifestyle-card-scene.jpg"
           : state.data.landing_lifestyle_image,
+        landing_background_image: state.data.landing_background_image || "/landing-assets/landing-background.jpg",
       });
     }
   }, [state.data, resetSettings]);
@@ -3635,8 +3638,9 @@ export function AdminSettings() {
           support_email: data.support_email,
           announcement_banner: data.announcement_banner || "",
           announcement_active: Boolean(data.announcement_active),
-          landing_food_image: data.landing_food_image || "/landing-assets/food-photo.jpg",
-          landing_lifestyle_image: data.landing_lifestyle_image || "/landing-assets/lifestyle-photo.jpg",
+          landing_food_image: data.landing_food_image || "/landing-assets/food-card-scene.jpg",
+          landing_lifestyle_image: data.landing_lifestyle_image || "/landing-assets/lifestyle-card-scene.jpg",
+          landing_background_image: data.landing_background_image || "/landing-assets/landing-background.jpg",
         }),
       );
       showToast("Marketplace operational settings updated successfully");
@@ -3645,16 +3649,19 @@ export function AdminSettings() {
     }
   }
 
-  async function uploadLandingImage(kind: "food" | "lifestyle", file?: File) {
+  async function uploadLandingImage(kind: "background" | "food" | "lifestyle", file?: File) {
     if (!file) return;
     setUploadingLandingImage(kind);
     try {
       const uploaded = await api.uploadImage(file);
-      setSettingsValue(kind === "food" ? "landing_food_image" : "landing_lifestyle_image", uploaded.url, {
+      const field = kind === "background"
+        ? "landing_background_image"
+        : kind === "food" ? "landing_food_image" : "landing_lifestyle_image";
+      setSettingsValue(field, uploaded.url, {
         shouldDirty: true,
         shouldValidate: true,
       });
-      showToast(`${kind === "food" ? "Food" : "Lifestyle"} landing image uploaded`);
+      showToast(`${kind === "background" ? "Background" : kind === "food" ? "Food" : "Lifestyle"} landing image uploaded`);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Could not upload landing image");
     } finally {
@@ -3773,15 +3780,17 @@ export function AdminSettings() {
             <Sparkles size={20} /> Storefront Landing Images
           </h2>
           <p style={{ color: "#667f70", margin: "0 0 16px", fontSize: 13 }}>
-            Upload the Food and Lifestyle artwork served by the backend on the customer landing page.
+            Upload the scenic background and destination imagery served by the backend on the customer landing page.
           </p>
           <div className="auth-form-grid">
-            {(["food", "lifestyle"] as const).map((kind) => {
-              const field = kind === "food" ? "landing_food_image" : "landing_lifestyle_image";
+            {(["background", "food", "lifestyle"] as const).map((kind) => {
+              const field = kind === "background"
+                ? "landing_background_image"
+                : kind === "food" ? "landing_food_image" : "landing_lifestyle_image";
               const value = watchSettings(field) || "";
               return (
                 <label className="auth-field" key={kind}>
-                  <span>{kind === "food" ? "Food image" : "Lifestyle image"}</span>
+                  <span>{kind === "background" ? "Scenic background" : kind === "food" ? "Food card image" : "Lifestyle card image"}</span>
                   <input {...registerSettings(field)} placeholder="/uploads/landing-image.jpg" />
                   <small style={{ color: "#667f70", fontSize: 12 }}>
                     Current: {value || "Using the default backend image"}

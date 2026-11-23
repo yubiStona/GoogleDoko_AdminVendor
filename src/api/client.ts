@@ -614,6 +614,7 @@ export interface PlatformSettings {
   support_email: string;
   announcement_banner: string;
   announcement_active: boolean;
+  landing_background_image?: string;
   landing_food_image?: string;
   landing_lifestyle_image?: string;
 }
@@ -804,6 +805,7 @@ export interface PlatformSettings {
   supportEmail: string;
   announcement: string;
   marketplaceStatus: string;
+  landing_background_image?: string;
   landing_food_image?: string;
   landing_lifestyle_image?: string;
 }
