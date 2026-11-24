@@ -15,6 +15,10 @@ import VendorSignupStatus from "./pages/VendorSignupStatus";
 import ResetPassword from "./pages/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
+import AdminPagesManager from "./pages/admin/AdminPagesManager";
+import AdminCategoriesManager from "./pages/admin/AdminCategoriesManager";
+import AdminContentHistory from "./pages/admin/AdminContentHistory";
 import NotFound from "./pages/NotFound";
 import PortalHome from "./pages/PortalHome";
 import VendorShell from "./components/vendor/VendorShell";
@@ -95,6 +99,10 @@ function App() {
                       <Route path="reviews" element={<AdminReviews />} />
                       <Route path="coupons" element={<AdminCoupons />} />
                       <Route path="settings" element={<AdminSettings />} />
+                      <Route path="website/homepage" element={<AdminHomepageBuilder />} />
+                      <Route path="website/pages" element={<AdminPagesManager />} />
+                      <Route path="website/categories" element={<AdminCategoriesManager />} />
+                      <Route path="website/history" element={<AdminContentHistory />} />
                     </Route>
                     <Route path="*" element={<NotFound />} />
                   </Routes>

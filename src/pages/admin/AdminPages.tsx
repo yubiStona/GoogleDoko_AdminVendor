@@ -131,7 +131,7 @@ function useData<T>(fetcher: () => Promise<T>) {
   return { data, error, busy, load, mutate, setData };
 }
 
-function AdminHeader({
+export function AdminHeader({
   title,
   subtitle,
   actions,
@@ -1136,6 +1136,9 @@ export function AdminProducts() {
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [activeProduct, setActiveProduct] = useState<Partial<AdminProduct>>({});
   const { showToast } = useAccount();
+  const [managedCategories, setManagedCategories] = useState<string[]>([]);
+  useEffect(() => { void api.categories().then((items) => setManagedCategories(items.map((item) => item.name))).catch(() => undefined); }, []);
+  const categoryChoices = Array.from(new Set([...PRODUCT_CATEGORIES, ...managedCategories]));
 
   useEffect(() => {
     setSearchQuery(params.get("q") || "");
@@ -1323,7 +1326,7 @@ export function AdminProducts() {
             <Layers size={22} />
           </div>
           <div className="ad-catalog-stat-info">
-            <strong>{metrics.activeCategories} / {PRODUCT_CATEGORIES.length}</strong>
+            <strong>{metrics.activeCategories} / {categoryChoices.length}</strong>
             <span>Active Categories</span>
           </div>
         </div>
@@ -1380,7 +1383,7 @@ export function AdminProducts() {
               aria-label="Select category"
             >
               <option value="All">All Categories ({(state.data || []).length})</option>
-              {PRODUCT_CATEGORIES.map((c) => {
+              {categoryChoices.map((c) => {
                 const count = (state.data || []).filter((p) => p.category === c).length;
                 return (
                   <option key={c} value={c}>
@@ -1449,7 +1452,7 @@ export function AdminProducts() {
             <span className="chip-count has-items">{(state.data || []).length}</span>
           </button>
 
-          {PRODUCT_CATEGORIES.map((c) => {
+          {categoryChoices.map((c) => {
             const count = (state.data || []).filter((p) => p.category === c).length;
             const meta = PRODUCT_CATEGORY_META[c] || { emoji: "📦", short: c };
             const isActive = categoryFilter === c;
@@ -1644,10 +1647,10 @@ export function AdminProducts() {
                   <label className="auth-field">
                     <span>Category *</span>
                     <select
-                      value={activeProduct.category || PRODUCT_CATEGORIES[0]}
+                      value={activeProduct.category || categoryChoices[0]}
                       onChange={(e) => setActiveProduct({ ...activeProduct, category: e.target.value })}
                     >
-                      {PRODUCT_CATEGORIES.map((c) => (
+                      {categoryChoices.map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>
@@ -3567,6 +3570,13 @@ const settingsSchema = yup.object({
   platform_commission: yup.number().typeError("Enter a valid number").min(0).max(50, "Max commission is 50%").required("Commission is required"),
   support_phone: yup.string().required("Phone is required").trim(),
   support_email: yup.string().required("Email is required").email("Enter a valid email").trim(),
+  business_name: yup.string().default("GoogleDoko").trim(),
+  support_address: yup.string().default("Kathmandu, Nepal").trim(),
+  business_hours: yup.string().default("").trim(),
+  google_maps_url: yup.string().default("").trim().url("Enter a valid map URL"),
+  social_facebook: yup.string().default("").trim().url("Enter a valid URL"),
+  social_instagram: yup.string().default("").trim().url("Enter a valid URL"),
+  social_tiktok: yup.string().default("").trim().url("Enter a valid URL"),
   announcement_banner: yup.string().default("").trim(),
   announcement_active: yup.boolean().default(true),
   landing_food_image: yup.string().default("").trim(),
@@ -3597,6 +3607,13 @@ export function AdminSettings() {
       platform_commission: 8,
       support_phone: "+977 9801234567",
       support_email: "support@googledoko.com",
+      business_name: "GoogleDoko",
+      support_address: "Kathmandu, Nepal",
+      business_hours: "",
+      google_maps_url: "",
+      social_facebook: "",
+      social_instagram: "",
+      social_tiktok: "",
       announcement_banner: "",
       announcement_active: true,
       landing_food_image: "/landing-assets/food-card-scene.jpg",
@@ -3613,6 +3630,13 @@ export function AdminSettings() {
         platform_commission: state.data.platform_commission,
         support_phone: state.data.support_phone,
         support_email: state.data.support_email,
+        business_name: state.data.business_name || "GoogleDoko",
+        support_address: state.data.support_address || "Kathmandu, Nepal",
+        business_hours: state.data.business_hours || "",
+        google_maps_url: state.data.google_maps_url || "",
+        social_facebook: state.data.social_facebook || "",
+        social_instagram: state.data.social_instagram || "",
+        social_tiktok: state.data.social_tiktok || "",
         announcement_banner: state.data.announcement_banner,
         announcement_active: Boolean(state.data.announcement_active),
         landing_food_image: !state.data.landing_food_image || state.data.landing_food_image === "/landing-assets/food.png" || state.data.landing_food_image === "/landing-assets/food-photo.jpg"
@@ -3636,6 +3660,13 @@ export function AdminSettings() {
           platform_commission: Number(data.platform_commission),
           support_phone: data.support_phone,
           support_email: data.support_email,
+          business_name: data.business_name || "GoogleDoko",
+          support_address: data.support_address || "",
+          business_hours: data.business_hours || "",
+          google_maps_url: data.google_maps_url || "",
+          social_facebook: data.social_facebook || "",
+          social_instagram: data.social_instagram || "",
+          social_tiktok: data.social_tiktok || "",
           announcement_banner: data.announcement_banner || "",
           announcement_active: Boolean(data.announcement_active),
           landing_food_image: data.landing_food_image || "/landing-assets/food-card-scene.jpg",
@@ -3772,6 +3803,13 @@ export function AdminSettings() {
                 </span>
               )}
             </label>
+            <label className="auth-field"><span>Business name</span><input {...registerSettings("business_name")} /></label>
+            <label className="auth-field"><span>Business address</span><input {...registerSettings("support_address")} /></label>
+            <label className="auth-field"><span>Business hours</span><input {...registerSettings("business_hours")} placeholder="Sun–Fri, 9:00 AM–5:00 PM" /></label>
+            <label className="auth-field"><span>Google Maps link</span><input {...registerSettings("google_maps_url")} /></label>
+            <label className="auth-field"><span>Facebook URL</span><input {...registerSettings("social_facebook")} /></label>
+            <label className="auth-field"><span>Instagram URL</span><input {...registerSettings("social_instagram")} /></label>
+            <label className="auth-field"><span>TikTok URL</span><input {...registerSettings("social_tiktok")} /></label>
           </div>
         </div>
 

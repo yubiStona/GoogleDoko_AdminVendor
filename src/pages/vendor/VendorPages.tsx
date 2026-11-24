@@ -368,10 +368,12 @@ export function VendorAddProduct() {
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [availableLifestyles, setAvailableLifestyles] = useState<any[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<{ id: string; name: string }[]>([]);
   const [selectedLifestyles, setSelectedLifestyles] = useState<string[]>([]);
   const [lifestyleSubcat, setLifestyleSubcat] = useState<string>("");
 
   useEffect(() => {
+    api.categories().then((items) => setAvailableCategories(items.map(({ id, name }) => ({ id, name })))).catch(() => undefined);
     api.lifestyles()
       .then((res) => {
         if (Array.isArray(res)) setAvailableLifestyles(res);
@@ -573,19 +575,7 @@ export function VendorAddProduct() {
             <label className="vd-field">
               <span>Category <i>*</i></span>
               <select {...register("category")}>
-                <option value="Fruits">Fruits</option>
-                <option value="Vegetables">Vegetables</option>
-                <option value="Spices">Spices</option>
-                <option value="Dairy & Eggs">Dairy &amp; Eggs</option>
-                <option value="Grains">Grains &amp; Rice</option>
-                <option value="Honey">Honey &amp; Preserves</option>
-                <option value="Furniture">Furniture</option>
-                <option value="Home & Living">Home &amp; Living</option>
-                <option value="Kitchen & Dining">Kitchen &amp; Dining</option>
-                <option value="Fashion & Accessories">Fashion &amp; Accessories</option>
-                <option value="Garden & Outdoor">Garden &amp; Outdoor</option>
-                <option value="Beauty & Personal Care">Beauty &amp; Personal Care</option>
-                <option value="Others">Others</option>
+                {Array.from(new Set(["Fruits", "Vegetables", "Spices", "Dairy & Eggs", "Grains", "Honey", "Furniture", "Home & Living", "Kitchen & Dining", "Fashion & Accessories", "Garden & Outdoor", "Beauty & Personal Care", ...availableCategories.map((category) => category.name), "Others"])).map((name) => <option key={name} value={name}>{name}</option>)}
               </select>
             </label>
             <label className="vd-field">
