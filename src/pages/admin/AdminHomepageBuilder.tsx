@@ -97,8 +97,8 @@ export default function AdminHomepageBuilder() {
     {loading ? <p>Loading homepage content…</p> : <>
       <h2 style={{ margin: "8px 0 12px", color: "#28583e" }}>{foodHome ? "Food / Home page" : "Landing Page"}</h2>
       {foodHome && <p style={{ color: "#667f70", marginTop: 0 }}>Food / Home page sections</p>}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-        {sections.map(({ key }) => <button key={key} type="button" className={selected === key ? "auth-btn" : "vd-add-btn"} onClick={() => choose(key)}>{titles[key] || key.replaceAll("_", " ")}</button>)}
+      <div className="website-section-selector" role="tablist" aria-label={`${foodHome ? "Food homepage" : "Landing page"} sections`}>
+        {sections.map(({ key }) => <button key={key} type="button" role="tab" aria-selected={selected === key} className={`website-section-tab${selected === key ? " active" : ""}`} onClick={() => choose(key)}>{titles[key] || key.replaceAll("_", " ")}</button>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, .9fr)", gap: 20, alignItems: "start" }}>
         <section className="vd-card auth-form" aria-label={`${foodHome ? "Food / Home" : "Landing Page"} / ${titles[selected]} editor`}>

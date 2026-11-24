@@ -14837,6 +14837,58 @@ textarea {
   width: 100%;
 }
 
+.website-section-selector {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin: 8px 0 18px;
+  padding: 3px 2px 9px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbdccf transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.website-section-tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  width: auto;
+  padding: 0 14px;
+  border: 1px solid #d9e7dc;
+  border-radius: 9px;
+  background: #fff;
+  color: #476253;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.website-section-tab:hover {
+  border-color: #168d51;
+  background: #f2f8f3;
+  color: #176136;
+}
+
+.website-section-tab.active {
+  border-color: #168d51;
+  background: #168d51;
+  color: #fff;
+  box-shadow: 0 3px 9px rgba(22, 141, 81, .17);
+}
+
+.website-section-tab:focus-visible {
+  outline: 3px solid rgba(22, 141, 81, .25);
+  outline-offset: 2px;
+}
+
 .vd-settings .vd-products-head .vd-add-btn {
   width: auto;
 }
