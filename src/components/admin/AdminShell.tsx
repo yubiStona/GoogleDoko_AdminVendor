@@ -15,6 +15,7 @@ import {
   UserRound,
   Tag,
   Settings,
+  PanelsTopLeft,
   X,
   Star,
 } from "lucide-react";
@@ -33,6 +34,7 @@ const links = [
   { to: "/admin/support", label: "Support Inbox", icon: CircleHelp },
   { to: "/admin/subscribers", label: "Subscribers", icon: Mail },
   { to: "/admin/settings", label: "Marketplace Settings", icon: Settings },
+  { to: "/admin/website/homepage", label: "Website Management", icon: PanelsTopLeft },
   { to: "/admin/profile", label: "Admin Profile", icon: UserRound },
 ];
 

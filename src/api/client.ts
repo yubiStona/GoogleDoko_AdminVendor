@@ -30,6 +30,7 @@ const configuredApiBase = (
 // API_BASE_URL is commonly configured with its /api prefix, while the client
 // request paths below already include /api.
 const API_BASE = configuredApiBase.replace(/\/api$/i, "");
+export const getAdminMediaUrl = (value?: string) => value && value.startsWith("/uploads/") && API_BASE ? `${API_BASE}${value}` : value || "";
 
 export class ApiError extends Error {
   status?: number;
@@ -224,6 +225,23 @@ export const api = {
     }),
   adminDeleteCoupon: (id: number) =>
     request<{ ok: boolean }>(`/api/admin/coupons/${id}`, { method: "DELETE" }),
+  adminCmsCategories: () => request<AdminCmsCategory[]>("/api/admin/cms/categories"),
+  adminSaveCmsCategoryDraft: (id: number | null, body: { group: "product" | "place" | "lifestyle"; content: Record<string, string>; parentId: number | null; displayOrder: number }) =>
+    request<AdminCmsCategory>(id ? `/api/admin/cms/categories/${id}/draft` : "/api/admin/cms/categories/draft", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }),
+  adminPublishCmsCategory: (id: number) => request<AdminCmsCategory>(`/api/admin/cms/categories/${id}/publish`, { method: "POST" }),
+  adminArchiveCmsCategory: (id: number) => request<AdminCmsCategory>(`/api/admin/cms/categories/${id}/archive`, { method: "PATCH" }),
+  adminDeleteCmsCategory: (id: number, reassignToId?: number) => request<{ ok: boolean }>(`/api/admin/cms/categories/${id}`, { method: "DELETE", body: JSON.stringify({ reassignToId }) }),
+  adminCmsPages: () => request<AdminCmsPage[]>("/api/admin/cms/pages"),
+  adminSaveCmsPageDraft: (id: number | null, body: { slug: string; content: Record<string, string>; navigationVisible: boolean; displayOrder: number }) =>
+    request<AdminCmsPage>(id ? `/api/admin/cms/pages/${id}/draft` : "/api/admin/cms/pages/draft", { method: id ? "PUT" : "POST", body: JSON.stringify(body) }),
+  adminPublishCmsPage: (id: number) => request<AdminCmsPage>(`/api/admin/cms/pages/${id}/publish`, { method: "POST" }),
+  adminSetCmsPageStatus: (id: number, status: "draft" | "archived") => request<AdminCmsPage>(`/api/admin/cms/pages/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  adminHomepage: () => request<HomepageCmsSection[]>("/api/admin/cms/homepage"),
+  adminCmsHistory: (page = 1) => request<{ items: { id: number; recordType: string; recordKey: string; action: string; previousContent: unknown; newContent: unknown; adminUserId: number | null; createdAt: string }[]; total: number; page: number; limit: number; totalPages: number }>(`/api/admin/cms/history?page=${page}`),
+  adminSaveHomepageDraft: (key: HomepageCmsSection["key"], body: { content: Record<string, string>; visible: boolean; displayOrder: number }) =>
+    request<{ ok: boolean }>(`/api/admin/cms/homepage/${key}/draft`, { method: "PUT", body: JSON.stringify(body) }),
+  adminPublishHomepage: (key: HomepageCmsSection["key"]) =>
+    request<{ ok: boolean }>(`/api/admin/cms/homepage/${key}/publish`, { method: "POST" }),
   adminSettings: () => request<PlatformSettings>("/api/admin/settings"),
   adminUpdateSettings: (body: Partial<PlatformSettings>) =>
     request<{ ok: boolean; settings: PlatformSettings }>("/api/admin/settings", {
@@ -606,12 +624,57 @@ export interface AdminCoupon {
   created_at: string;
 }
 
+export interface AdminCmsCategory {
+  id: number;
+  group: "product" | "place" | "lifestyle";
+  slug: string;
+  parentId: number | null;
+  content: Record<string, string> | null;
+  draftContent: Record<string, string> | null;
+  publishedContent: Record<string, string> | null;
+  status: "draft" | "published" | "archived";
+  displayOrder: number;
+  productCount: number;
+  childCount: number;
+}
+
+export interface AdminCmsPage {
+  id: number;
+  slug: string;
+  draftSlug: string | null;
+  draftContent: Record<string, string> | null;
+  publishedContent: Record<string, string> | null;
+  status: "draft" | "published" | "archived";
+  navigationVisible: number;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HomepageCmsSection {
+  key: string;
+  draftContent: Record<string, string>;
+  publishedContent: Record<string, string>;
+  publishedVisible: number;
+  draftVisible: number;
+  displayOrder: number;
+  status: "draft" | "published";
+  updatedAt: string | null;
+}
+
 export interface PlatformSettings {
   delivery_fee: number;
   free_delivery_threshold: number;
   platform_commission: number;
   support_phone: string;
   support_email: string;
+  business_name?: string;
+  support_address?: string;
+  business_hours?: string;
+  google_maps_url?: string;
+  social_facebook?: string;
+  social_instagram?: string;
+  social_tiktok?: string;
   announcement_banner: string;
   announcement_active: boolean;
   landing_background_image?: string;
@@ -796,6 +859,44 @@ export interface RewardEntry {
   label: string;
   points: number;
   date: string;
+}
+
+export interface AdminCmsCategory {
+  id: number;
+  group: "product" | "place" | "lifestyle";
+  slug: string;
+  parentId: number | null;
+  content: Record<string, string> | null;
+  draftContent: Record<string, string> | null;
+  publishedContent: Record<string, string> | null;
+  status: "draft" | "published" | "archived";
+  displayOrder: number;
+  productCount: number;
+  childCount: number;
+}
+
+export interface AdminCmsPage {
+  id: number;
+  slug: string;
+  draftSlug: string | null;
+  draftContent: Record<string, string> | null;
+  publishedContent: Record<string, string> | null;
+  status: "draft" | "published" | "archived";
+  navigationVisible: number;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HomepageCmsSection {
+  key: string;
+  draftContent: Record<string, string>;
+  publishedContent: Record<string, string>;
+  publishedVisible: number;
+  draftVisible: number;
+  displayOrder: number;
+  status: "draft" | "published";
+  updatedAt: string | null;
 }
 
 export interface PlatformSettings {
