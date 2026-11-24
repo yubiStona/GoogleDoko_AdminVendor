@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Archive, Eye, FilePlus2, Send } from "lucide-react";
-import { api, type AdminCmsPage } from "../../api/client";
+import { api, getAdminMediaUrl, type AdminCmsPage } from "../../api/client";
 import { useAccount } from "../../context/AccountContext";
 import { AdminHeader } from "./AdminPages";
+import WebsiteManagementNav from "./WebsiteManagementNav";
 
 const emptyContent = {
   title: "", description: "", body: "", heroImage: "", imageAlt: "",
   seoTitle: "", metaDescription: "", socialTitle: "", socialDescription: "", ogImage: "",
+  sectionTitle: "", sectionDescription: "", promoTitle: "", promoDescription: "", promoImage: "", promoButton: "", promoHref: "",
 };
 const fields: { key: keyof typeof emptyContent; label: string; long?: boolean }[] = [
   { key: "title", label: "Page title" }, { key: "description", label: "Short description", long: true },
@@ -15,6 +17,11 @@ const fields: { key: keyof typeof emptyContent; label: string; long?: boolean }[
   { key: "seoTitle", label: "SEO title" }, { key: "metaDescription", label: "Meta description", long: true },
   { key: "socialTitle", label: "Social sharing title" }, { key: "socialDescription", label: "Social sharing description", long: true },
   { key: "ogImage", label: "Open Graph image URL" },
+  { key: "sectionTitle", label: "Main section heading (category/place directory pages)" },
+  { key: "sectionDescription", label: "Main section supporting text" },
+  { key: "promoTitle", label: "Promo heading" }, { key: "promoDescription", label: "Promo supporting text", long: true },
+  { key: "promoImage", label: "Promo image URL" }, { key: "promoButton", label: "Promo button label" },
+  { key: "promoHref", label: "Promo destination" },
 ];
 
 export default function AdminPagesManager() {
@@ -49,6 +56,16 @@ export default function AdminPagesManager() {
     setNavigationVisible(Boolean(page.navigationVisible)); setDisplayOrder(page.displayOrder);
   }
   function newPage() { choose(null); setError(""); }
+  function openStarter(slugValue: string, title: string, description: string, inNavigation = false) {
+    const existing = pages.find((page) => page.slug === slugValue || page.draftSlug === slugValue);
+    if (existing) { choose(existing); return; }
+    choose(null);
+    setSlug(slugValue);
+    setContent({ ...emptyContent, title, description });
+    setNavigationVisible(inNavigation);
+    setDisplayOrder(pages.length);
+    setError("");
+  }
 
   async function save(publish: boolean) {
     if (!slug.trim() || !content.title?.trim() || !content.description?.trim()) { setError("Enter a URL slug, page title, and description."); return; }
@@ -79,9 +96,13 @@ export default function AdminPagesManager() {
 
   return <div className="vd-settings">
     <AdminHeader title="Pages Management" subtitle="Create and publish informational pages using structured, safe content fields." refresh={() => void load()} busy={loading} actions={<button type="button" className="vd-add-btn" onClick={newPage}><FilePlus2 size={16} />New page</button>} />
+    <WebsiteManagementNav />
     {error && <p role="alert" className="auth-error">{error}</p>}
     {loading ? <p>Loading pages…</p> : <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, .5fr) minmax(0, 1.5fr)", gap: 18, alignItems: "start" }}>
       <aside className="vd-card" style={{ padding: 12 }}><strong style={{ display: "block", padding: 8 }}>Pages</strong>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: 8 }}>
+          {[["about", "About Us"], ["contact", "Contact Us"], ["news", "News"], ["places", "Location & Places"], ["categories", "Shop by Product"], ["privacy", "Privacy"], ["terms", "Terms"]].map(([slugValue, label]) => <button key={slugValue} type="button" className="vd-add-btn" style={{ padding: "6px 9px", fontSize: 11 }} onClick={() => openStarter(slugValue, label, "", slugValue === "about" || slugValue === "contact")}>{label}</button>)}
+        </div>
         {!pages.length && <p style={{ padding: 8, color: "#667f70" }}>No pages yet. Create an informational page to begin.</p>}
         {pages.map((page) => <button key={page.id} type="button" onClick={() => choose(page)} style={{ width: "100%", textAlign: "left", padding: 12, border: 0, borderRadius: 10, background: selectedId === page.id ? "#e7f5eb" : "transparent", cursor: "pointer" }}><strong>{(page.draftContent || page.publishedContent)?.title || page.slug}</strong><small style={{ display: "block", color: "#667f70" }}>/{page.draftSlug || page.slug} · {page.status}</small></button>)}
       </aside>
@@ -92,7 +113,7 @@ export default function AdminPagesManager() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, margin: "14px 0" }}><label><input type="checkbox" checked={navigationVisible} onChange={(event) => setNavigationVisible(event.target.checked)} /> Show in navigation</label><label>Display order <input type="number" min="0" value={displayOrder} onChange={(event) => setDisplayOrder(Number(event.target.value))} style={{ width: 70 }} /></label></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><button type="button" className="vd-add-btn" disabled={saving || uploading} onClick={() => void save(false)}>Save draft</button><button type="button" className="auth-btn" disabled={saving || uploading} onClick={() => void save(true)}><Send size={16} />{saving ? "Saving…" : "Publish"}</button>{selectedId && <><button type="button" className="vd-add-btn" disabled={saving} onClick={() => void setStatus("draft")}>Unpublish</button><button type="button" className="vd-add-btn" disabled={saving} onClick={() => void setStatus("archived")}><Archive size={16} />Archive</button></>}</div>
         </section>
-        <section className="vd-card"><h2 style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 17 }}><Eye size={17} />Draft preview</h2><small>Public URL: /pages/{slug || "your-slug"}</small><h1>{content.title || "Page title"}</h1><p>{content.description || "Page description"}</p>{content.heroImage && <img src={content.heroImage} alt={content.imageAlt || ""} style={{ width: "100%", maxHeight: 300, objectFit: "cover", borderRadius: 12 }} />}<p style={{ whiteSpace: "pre-wrap" }}>{content.body || "Your page content will appear here."}</p></section>
+        <section className="vd-card"><h2 style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 17 }}><Eye size={17} />Draft preview</h2><small>Public URL: /pages/{slug || "your-slug"}</small><h1>{content.title || "Page title"}</h1><p>{content.description || "Page description"}</p>{content.heroImage && <img src={getAdminMediaUrl(content.heroImage)} alt={content.imageAlt || ""} style={{ width: "100%", maxHeight: 300, objectFit: "cover", borderRadius: 12 }} />}<p style={{ whiteSpace: "pre-wrap" }}>{content.body || "Your page content will appear here."}</p></section>
       </div>
     </div>}
   </div>;

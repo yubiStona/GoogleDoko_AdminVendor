@@ -18,9 +18,6 @@ import {
   PanelsTopLeft,
   X,
   Star,
-  FileText,
-  Tags,
-  History,
 } from "lucide-react";
 
 import { useAccount } from "../../context/AccountContext";
@@ -38,9 +35,6 @@ const links = [
   { to: "/admin/subscribers", label: "Subscribers", icon: Mail },
   { to: "/admin/settings", label: "Marketplace Settings", icon: Settings },
   { to: "/admin/website/homepage", label: "Website Management", icon: PanelsTopLeft },
-  { to: "/admin/website/pages", label: "Pages Management", icon: FileText },
-  { to: "/admin/website/categories", label: "Categories Management", icon: Tags },
-  { to: "/admin/website/history", label: "Content History", icon: History },
   { to: "/admin/profile", label: "Admin Profile", icon: UserRound },
 ];
 

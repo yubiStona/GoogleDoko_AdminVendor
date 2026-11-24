@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Archive, Eye, FilePlus2, Send, Trash2 } from "lucide-react";
-import { api, type AdminCmsCategory } from "../../api/client";
+import { api, getAdminMediaUrl, type AdminCmsCategory } from "../../api/client";
 import { useAccount } from "../../context/AccountContext";
 import { AdminHeader } from "./AdminPages";
+import WebsiteManagementNav from "./WebsiteManagementNav";
 
-const blank = { name: "", description: "", image: "", seoTitle: "", metaDescription: "", unit: "piece", theme: "green", icon: "tag" };
+const blank = { name: "", description: "", image: "", seoTitle: "", metaDescription: "", unit: "piece", theme: "green", icon: "tag", heroEyebrow: "", heroTitle: "" };
 const groupLabel: Record<AdminCmsCategory["group"], string> = { product: "Shop by Product", place: "Shop by Place", lifestyle: "Shop by Lifestyle" };
 
 export default function AdminCategoriesManager() {
@@ -77,6 +78,7 @@ export default function AdminCategoriesManager() {
 
   return <div className="vd-settings">
     <AdminHeader title="Categories Management" subtitle="Manage product, place, and lifestyle categories with protected product relationships." refresh={() => void load()} busy={loading} actions={<button type="button" className="vd-add-btn" onClick={() => choose(null)}><FilePlus2 size={16} />New category</button>} />
+    <WebsiteManagementNav />
     {error && <p role="alert" className="auth-error">{error}</p>}
     {loading ? <p>Loading categories…</p> : <div style={{ display: "grid", gridTemplateColumns: "minmax(190px, .55fr) minmax(0, 1.45fr)", gap: 18, alignItems: "start" }}>
       <aside className="vd-card" style={{ padding: 12 }}><strong style={{ display: "block", padding: 8 }}>Categories</strong>{!rows.length && <p style={{ color: "#667f70", padding: 8 }}>No CMS categories yet. Existing product categories remain available while you add managed entries.</p>}{rows.map((row) => <button key={row.id} type="button" onClick={() => choose(row)} style={{ width: "100%", display: "block", textAlign: "left", padding: 11, border: 0, borderRadius: 10, background: selectedId === row.id ? "#e7f5eb" : "transparent", cursor: "pointer" }}><strong>{row.content?.name || row.slug}</strong><small style={{ display: "block", color: "#667f70" }}>{groupLabel[row.group]} · {row.status}</small></button>)}</aside>
@@ -89,12 +91,13 @@ export default function AdminCategoriesManager() {
           <label className="auth-field"><span>Display order</span><input type="number" min="0" value={displayOrder} onChange={(event) => setDisplayOrder(Number(event.target.value))} /></label>
         </div>
         <label className="auth-field"><span>Description</span><textarea rows={3} value={content.description} onChange={(event) => setContent((v) => ({ ...v, description: event.target.value }))} /></label>
+        {group === "place" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}><label className="auth-field"><span>Place page hero label</span><input value={content.heroEyebrow} onChange={(event) => setContent((v) => ({ ...v, heroEyebrow: event.target.value }))} /></label><label className="auth-field"><span>Place page hero heading</span><input value={content.heroTitle} onChange={(event) => setContent((v) => ({ ...v, heroTitle: event.target.value }))} /></label></div>}
         <label className="auth-field"><span>Image URL</span><input value={content.image} onChange={(event) => setContent((v) => ({ ...v, image: event.target.value }))} /><input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={(event) => { void upload(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} /></label>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}><label className="auth-field"><span>SEO title</span><input value={content.seoTitle} onChange={(event) => setContent((v) => ({ ...v, seoTitle: event.target.value }))} /></label><label className="auth-field"><span>SEO description</span><textarea value={content.metaDescription} onChange={(event) => setContent((v) => ({ ...v, metaDescription: event.target.value }))} /></label></div>
         {selected && <p style={{ color: selected.productCount || selected.childCount ? "#9a5b00" : "#667f70" }}>Dependencies: {selected.productCount} products · {selected.childCount} child categories. {selected.productCount || selected.childCount ? "Reassign before deletion or archive this category." : "Safe to delete."}</p>}
         {Boolean(selected?.productCount || selected?.childCount) && <label className="auth-field"><span>Reassign to published category before deleting</span><select value={reassignToId || ""} onChange={(event) => setReassignToId(event.target.value ? Number(event.target.value) : undefined)}><option value="">Choose a category…</option>{groupRows.map((row) => <option key={row.id} value={row.id}>{row.content?.name || row.slug}</option>)}</select></label>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12 }}><button type="button" className="vd-add-btn" disabled={saving || uploading} onClick={() => void save(false)}>Save draft</button><button type="button" className="auth-btn" disabled={saving || uploading} onClick={() => void save(true)}><Send size={16} />{saving ? "Saving…" : "Publish"}</button>{selected && <><button type="button" className="vd-add-btn" disabled={saving} onClick={() => void archive()}><Archive size={16} />Archive</button><button type="button" className="vd-add-btn" disabled={saving || uploading || Boolean((selected.productCount || selected.childCount) && !reassignToId)} onClick={() => void remove()}><Trash2 size={16} />Delete</button></>}</div>
-        {content.image && <div style={{ marginTop: 18 }}><h3 style={{ display: "flex", gap: 8, alignItems: "center" }}><Eye size={16} />Preview</h3><img src={content.image} alt={content.name} style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 12 }} /><h2>{content.name || "Category name"}</h2><p>{content.description || "Category description"}</p></div>}
+        {content.image && <div style={{ marginTop: 18 }}><h3 style={{ display: "flex", gap: 8, alignItems: "center" }}><Eye size={16} />Preview</h3><img src={getAdminMediaUrl(content.image)} alt={content.name} style={{ width: "100%", maxHeight: 240, objectFit: "cover", borderRadius: 12 }} /><h2>{content.name || "Category name"}</h2><p>{content.description || "Category description"}</p></div>}
       </section>
     </div>}
   </div>;

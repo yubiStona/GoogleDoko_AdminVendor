@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Eye, Save, Send, ArrowUp, ArrowDown } from "lucide-react";
-import { api, type HomepageCmsSection } from "../../api/client";
+import { api, getAdminMediaUrl, type HomepageCmsSection } from "../../api/client";
 import { useAccount } from "../../context/AccountContext";
 import { AdminHeader } from "./AdminPages";
+import WebsiteManagementNav from "./WebsiteManagementNav";
 
 type SectionKey = HomepageCmsSection["key"];
-const fields: Record<SectionKey, { key: string; label: string }[]> = {
+const fields: Record<string, { key: string; label: string }[]> = {
   hero: [
     { key: "eyebrow", label: "Tagline" }, { key: "title", label: "Main heading" },
     { key: "description", label: "Description" }, { key: "backgroundImage", label: "Background image URL" },
@@ -23,8 +24,29 @@ const fields: Record<SectionKey, { key: string; label: string }[]> = {
     { key: "image", label: "Image URL" }, { key: "imageAlt", label: "Image alt text" },
     { key: "href", label: "Button destination" },
   ],
+  special_offers: [
+    { key: "title", label: "Section heading" }, { key: "description", label: "Section text" },
+    { key: "image", label: "Offer image URL" }, { key: "button", label: "Button label" }, { key: "href", label: "Button destination" },
+  ],
+  how_it_works: [
+    { key: "title", label: "Section heading" }, { key: "description", label: "Intro text" },
+    ...[1, 2, 3].flatMap((n) => [{ key: `step${n}Title`, label: `Step ${n} heading` }, { key: `step${n}Description`, label: `Step ${n} text` }]),
+  ],
+  why_choose_us: [
+    { key: "title", label: "Section heading" }, { key: "description", label: "Intro text" },
+    ...[1, 2, 3].flatMap((n) => [{ key: `item${n}Title`, label: `Benefit ${n} heading` }, { key: `item${n}Description`, label: `Benefit ${n} text` }]),
+  ],
+  promo: [
+    { key: "title", label: "Promotion heading" }, { key: "description", label: "Promotion text" },
+    { key: "image", label: "Promotion image URL" }, { key: "button", label: "Button label" }, { key: "href", label: "Button destination" },
+  ],
+  footer: [
+    { key: "aboutTitle", label: "About heading" }, { key: "aboutText", label: "About text" },
+    { key: "location", label: "Location" }, { key: "phone", label: "Phone number" }, { key: "email", label: "Email" },
+    { key: "privacyLabel", label: "Privacy link label" }, { key: "termsLabel", label: "Terms link label" },
+  ],
 };
-const titles: Record<SectionKey, string> = { hero: "Homepage hero", food: "Food destination", lifestyle: "Lifestyle destination" };
+const titles: Record<string, string> = { hero: "Hero section", food: "Explore food", lifestyle: "Explore lifestyle", special_offers: "Special offers", how_it_works: "How it works", why_choose_us: "Why choose us", promo: "Promotion section", footer: "Footer" };
 
 export default function AdminHomepageBuilder() {
   const { showToast } = useAccount();
@@ -91,19 +113,20 @@ export default function AdminHomepageBuilder() {
   const image = selected === "hero" ? content.backgroundImage : content.image;
   return <div className="vd-settings">
     <AdminHeader title="Homepage Builder" subtitle="Edit the public homepage, preview draft changes, then publish them." refresh={() => void load()} busy={loading} />
+    <WebsiteManagementNav />
     {error && <p role="alert" className="auth-error">{error}</p>}
     {loading ? <p>Loading homepage content…</p> : <>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-        {(["hero", "food", "lifestyle"] as SectionKey[]).map((key) => <button key={key} type="button" className={selected === key ? "auth-btn" : "vd-add-btn"} onClick={() => choose(key)}>{titles[key]}</button>)}
+        {sections.map(({ key }) => <button key={key} type="button" className={selected === key ? "auth-btn" : "vd-add-btn"} onClick={() => choose(key)}>{titles[key] || key.replaceAll("_", " ")}</button>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(280px, .9fr)", gap: 20, alignItems: "start" }}>
         <section className="vd-card auth-form" aria-label={`${titles[selected]} editor`}>
           <h2 style={{ color: "#168d51", fontSize: 18 }}>Section content</h2>
           {fields[selected].map(({ key, label }) => <label className="auth-field" key={key}>
             <span>{label}</span>
-            {key === "description" ? <textarea rows={3} value={content[key] || ""} onChange={(event) => setContent((current) => ({ ...current, [key]: event.target.value }))} /> : <input value={content[key] || ""} onChange={(event) => setContent((current) => ({ ...current, [key]: event.target.value }))} />}
+            {key.toLowerCase().includes("description") || key === "description" || key === "aboutText" ? <textarea rows={3} value={content[key] || ""} onChange={(event) => setContent((current) => ({ ...current, [key]: event.target.value }))} /> : <input value={content[key] || ""} onChange={(event) => setContent((current) => ({ ...current, [key]: event.target.value }))} />}
           </label>)}
-          <label className="auth-field"><span>Upload replacement image</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={(event) => { void upload(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />{uploading && <small>Uploading image…</small>}</label>
+          {(selected === "hero" || content.image !== undefined) && <label className="auth-field"><span>Upload replacement image</span><input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={(event) => { void upload(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />{uploading && <small>Uploading image…</small>}</label>}
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", margin: "14px 0" }}>
             <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} />Show on public homepage</label>
             {selected !== "hero" && <><label style={{ display: "flex", gap: 8, alignItems: "center" }}>Display order <input type="number" min="0" value={order} onChange={(event) => setOrder(Number(event.target.value))} style={{ width: 75 }} /></label>
@@ -119,10 +142,10 @@ export default function AdminHomepageBuilder() {
         <section className="vd-card" aria-label="Draft preview" style={{ overflow: "hidden", padding: 0 }}>
           <div style={{ padding: 18, display: "flex", gap: 8, alignItems: "center" }}><Eye size={17} /><strong>Draft preview</strong></div>
           <div style={{ minHeight: 300, position: "relative", padding: 24, display: "flex", flexDirection: "column", justifyContent: "end", color: "white", background: "#1d4a32" }}>
-            {image && <img src={image} alt={content.imageAlt || ""} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .72 }} />}
+            {image && <img src={getAdminMediaUrl(image)} alt={content.imageAlt || ""} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .72 }} />}
             <div style={{ position: "relative", textShadow: "0 1px 4px #10251a" }}>
               <small>{content.eyebrow}</small><h2 style={{ fontSize: 28, margin: "8px 0" }}>{content.title}</h2><p>{content.description}</p>
-              {selected !== "hero" && <button type="button" className="auth-btn">{content.button || "Explore"}</button>}
+            {content.button && <button type="button" className="auth-btn">{content.button}</button>}
             </div>
           </div>
           {!visible && <p style={{ padding: "0 18px 14px", color: "#a44" }}>This section is hidden from customers when published.</p>}

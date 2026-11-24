@@ -30,6 +30,7 @@ const configuredApiBase = (
 // API_BASE_URL is commonly configured with its /api prefix, while the client
 // request paths below already include /api.
 const API_BASE = configuredApiBase.replace(/\/api$/i, "");
+export const getAdminMediaUrl = (value?: string) => value && value.startsWith("/uploads/") && API_BASE ? `${API_BASE}${value}` : value || "";
 
 export class ApiError extends Error {
   status?: number;
@@ -651,7 +652,7 @@ export interface AdminCmsPage {
 }
 
 export interface HomepageCmsSection {
-  key: "hero" | "food" | "lifestyle";
+  key: string;
   draftContent: Record<string, string>;
   publishedContent: Record<string, string>;
   publishedVisible: number;
@@ -888,7 +889,7 @@ export interface AdminCmsPage {
 }
 
 export interface HomepageCmsSection {
-  key: "hero" | "food" | "lifestyle";
+  key: string;
   draftContent: Record<string, string>;
   publishedContent: Record<string, string>;
   publishedVisible: number;
