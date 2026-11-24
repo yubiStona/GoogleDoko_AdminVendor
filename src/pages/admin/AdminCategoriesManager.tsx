@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Archive, Eye, FilePlus2, Send, Trash2 } from "lucide-react";
 import { api, getAdminMediaUrl, type AdminCmsCategory } from "../../api/client";
 import { useAccount } from "../../context/AccountContext";
@@ -9,10 +10,12 @@ const blank = { name: "", description: "", image: "", seoTitle: "", metaDescript
 const groupLabel: Record<AdminCmsCategory["group"], string> = { product: "Shop by Product", place: "Shop by Place", lifestyle: "Shop by Lifestyle" };
 
 export default function AdminCategoriesManager() {
+  const [searchParams] = useSearchParams();
+  const requestedGroup = searchParams.get("group");
   const { showToast } = useAccount();
   const [rows, setRows] = useState<AdminCmsCategory[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [group, setGroup] = useState<AdminCmsCategory["group"]>("product");
+  const [group, setGroup] = useState<AdminCmsCategory["group"]>(requestedGroup === "place" ? "place" : "product");
   const [content, setContent] = useState<Record<string, string>>(blank);
   const [parentId, setParentId] = useState<number | null>(null);
   const [displayOrder, setDisplayOrder] = useState(0);
@@ -27,14 +30,14 @@ export default function AdminCategoriesManager() {
     try {
       const list = await api.adminCmsCategories(); setRows(list);
       if (preferred) choose(list.find((row) => row.id === preferred) || null);
-      else if (list.length) choose(list[0]);
+      else { const target = requestedGroup === "place" ? "place" : "product"; choose(list.find((row) => row.group === target) || null); }
     } catch (err) { setError(err instanceof Error ? err.message : "Could not load categories"); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void load(null); }, []);
+  useEffect(() => { setGroup(requestedGroup === "place" ? "place" : "product"); void load(null); }, [requestedGroup]);
   function choose(row: AdminCmsCategory | null) {
     setSelectedId(row?.id || null);
-    if (!row) { setGroup("product"); setContent({ ...blank }); setParentId(null); setDisplayOrder(0); setReassignToId(undefined); return; }
+    if (!row) { setGroup(requestedGroup === "place" ? "place" : "product"); setContent({ ...blank }); setParentId(null); setDisplayOrder(0); setReassignToId(undefined); return; }
     setGroup(row.group); setContent({ ...blank, ...(row.draftContent || row.content || row.publishedContent || {}) });
     setParentId(row.parentId); setDisplayOrder(row.displayOrder); setReassignToId(undefined);
   }
@@ -77,11 +80,11 @@ export default function AdminCategoriesManager() {
   const groupRows = rows.filter((row) => row.group === group && row.id !== selectedId && row.status === "published");
 
   return <div className="vd-settings">
-    <AdminHeader title="Categories Management" subtitle="Manage product, place, and lifestyle categories with protected product relationships." refresh={() => void load()} busy={loading} actions={<button type="button" className="vd-add-btn" onClick={() => choose(null)}><FilePlus2 size={16} />New category</button>} />
+    <AdminHeader title={requestedGroup === "place" ? (searchParams.get("view") === "details" ? "Food / Place details" : "Food / Categories by Place") : "Food / Categories by Food"} subtitle={requestedGroup === "place" ? "Manage places and the hero/text shown on their detail pages. Edit the places directory page under Food / Pages." : "Manage food categories. Edit the Shop by Product page hero and text under Food / Pages."} refresh={() => void load()} busy={loading} actions={<button type="button" className="vd-add-btn" onClick={() => choose(null)}><FilePlus2 size={16} />New category</button>} />
     <WebsiteManagementNav />
     {error && <p role="alert" className="auth-error">{error}</p>}
     {loading ? <p>Loading categories…</p> : <div style={{ display: "grid", gridTemplateColumns: "minmax(190px, .55fr) minmax(0, 1.45fr)", gap: 18, alignItems: "start" }}>
-      <aside className="vd-card" style={{ padding: 12 }}><strong style={{ display: "block", padding: 8 }}>Categories</strong>{!rows.length && <p style={{ color: "#667f70", padding: 8 }}>No CMS categories yet. Existing product categories remain available while you add managed entries.</p>}{rows.map((row) => <button key={row.id} type="button" onClick={() => choose(row)} style={{ width: "100%", display: "block", textAlign: "left", padding: 11, border: 0, borderRadius: 10, background: selectedId === row.id ? "#e7f5eb" : "transparent", cursor: "pointer" }}><strong>{row.content?.name || row.slug}</strong><small style={{ display: "block", color: "#667f70" }}>{groupLabel[row.group]} · {row.status}</small></button>)}</aside>
+      <aside className="vd-card" style={{ padding: 12 }}><strong style={{ display: "block", padding: 8 }}>{requestedGroup === "place" ? "Food / Categories by Place" : "Food / Categories by Food"}</strong>{!rows.length && <p style={{ color: "#667f70", padding: 8 }}>No CMS categories yet. Existing product categories remain available while you add managed entries.</p>}{rows.filter((row) => row.group === (requestedGroup === "place" ? "place" : "product")).map((row) => <button key={row.id} type="button" onClick={() => choose(row)} style={{ width: "100%", display: "block", textAlign: "left", padding: 11, border: 0, borderRadius: 10, background: selectedId === row.id ? "#e7f5eb" : "transparent", cursor: "pointer" }}><strong>{row.content?.name || row.slug}</strong><small style={{ display: "block", color: "#667f70" }}>{groupLabel[row.group]} · {row.status}</small></button>)}</aside>
       <section className="vd-card auth-form">
         <label className="auth-field"><span>Category group</span><select value={group} onChange={(event) => setGroup(event.target.value as AdminCmsCategory["group"])}>{Object.entries(groupLabel).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>

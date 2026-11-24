@@ -100,6 +100,7 @@ function App() {
                       <Route path="coupons" element={<AdminCoupons />} />
                       <Route path="settings" element={<AdminSettings />} />
                       <Route path="website/homepage" element={<AdminHomepageBuilder />} />
+                      <Route path="website/food-home" element={<AdminHomepageBuilder />} />
                       <Route path="website/pages" element={<AdminPagesManager />} />
                       <Route path="website/categories" element={<AdminCategoriesManager />} />
                       <Route path="website/history" element={<AdminContentHistory />} />

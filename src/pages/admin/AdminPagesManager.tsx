@@ -95,13 +95,13 @@ export default function AdminPagesManager() {
   }
 
   return <div className="vd-settings">
-    <AdminHeader title="Pages Management" subtitle="Create and publish informational pages using structured, safe content fields." refresh={() => void load()} busy={loading} actions={<button type="button" className="vd-add-btn" onClick={newPage}><FilePlus2 size={16} />New page</button>} />
+    <AdminHeader title="Food / Informational pages" subtitle="Edit About Us, Contact Us, News, Location, Privacy, and Terms pages." refresh={() => void load()} busy={loading} actions={<button type="button" className="vd-add-btn" onClick={newPage}><FilePlus2 size={16} />New page</button>} />
     <WebsiteManagementNav />
     {error && <p role="alert" className="auth-error">{error}</p>}
     {loading ? <p>Loading pages…</p> : <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, .5fr) minmax(0, 1.5fr)", gap: 18, alignItems: "start" }}>
-      <aside className="vd-card" style={{ padding: 12 }}><strong style={{ display: "block", padding: 8 }}>Pages</strong>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: 8 }}>
-          {[["about", "About Us"], ["contact", "Contact Us"], ["news", "News"], ["places", "Location & Places"], ["categories", "Shop by Product"], ["privacy", "Privacy"], ["terms", "Terms"]].map(([slugValue, label]) => <button key={slugValue} type="button" className="vd-add-btn" style={{ padding: "6px 9px", fontSize: 11 }} onClick={() => openStarter(slugValue, label, "", slugValue === "about" || slugValue === "contact")}>{label}</button>)}
+      <aside className="vd-card" style={{ padding: 12 }}><strong style={{ display: "block", padding: 8 }}>Food / Pages</strong>
+        <div style={{ padding: 8 }}>
+          {[{ heading: "Food / Category pages", pages: [["categories", "Shop by Product"], ["places", "Shop by Place"]] }, { heading: "Food / Information pages", pages: [["about", "About Us"], ["contact", "Contact Us"], ["news", "News"]] }, { heading: "Food / Location & legal", pages: [["location", "Location"], ["privacy", "Privacy Policy"], ["terms", "Terms & Conditions"]] }].map((group) => <section key={group.heading} style={{ marginBottom: 12 }}><strong style={{ display: "block", color: "#476253", fontSize: 12, marginBottom: 6 }}>{group.heading}</strong><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{group.pages.map(([slugValue, label]) => <button key={slugValue} type="button" className="vd-add-btn" style={{ padding: "6px 9px", fontSize: 11 }} onClick={() => openStarter(slugValue, label, "", slugValue === "about" || slugValue === "contact")}>{label}</button>)}</div></section>)}
         </div>
         {!pages.length && <p style={{ padding: 8, color: "#667f70" }}>No pages yet. Create an informational page to begin.</p>}
         {pages.map((page) => <button key={page.id} type="button" onClick={() => choose(page)} style={{ width: "100%", textAlign: "left", padding: 12, border: 0, borderRadius: 10, background: selectedId === page.id ? "#e7f5eb" : "transparent", cursor: "pointer" }}><strong>{(page.draftContent || page.publishedContent)?.title || page.slug}</strong><small style={{ display: "block", color: "#667f70" }}>/{page.draftSlug || page.slug} · {page.status}</small></button>)}
