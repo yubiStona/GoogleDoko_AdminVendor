@@ -64,9 +64,6 @@ export default function AdminHomepageBuilder() {
   }
 
   async function save(publish: boolean) {
-    if (fields[selected].some(({ key }) => !content[key]?.trim())) {
-      setError("Fill in every required field before saving."); return;
-    }
     setSaving(true); setError("");
     try {
       await api.adminSaveHomepageDraft(selected, { content, visible, displayOrder: Math.max(0, order) });
