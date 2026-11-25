@@ -1507,10 +1507,10 @@ export function VendorReports() {
   }, [range]);
 
   const metrics = useMemo(() => {
-    const rev = reportData?.grossRevenue || 0;
-    const orders = reportData?.totalOrders || 0;
-    const avg = reportData?.avgOrderValue || 0;
-    const completed = reportData?.completedOrders || 0;
+    const rev = reportData?.grossRevenue ?? reportData?.metrics?.grossRevenue ?? 0;
+    const orders = reportData?.totalOrders ?? reportData?.metrics?.totalOrders ?? 0;
+    const avg = reportData?.avgOrderValue ?? reportData?.metrics?.avgOrderValue ?? 0;
+    const completed = reportData?.completedOrders ?? reportData?.metrics?.completedOrders ?? 0;
     const completionRate = orders > 0 ? Math.round((completed / orders) * 100) : 0;
 
     return [
@@ -1596,7 +1596,11 @@ export function VendorReports() {
           {bars.length > 0 && bars.some((b) => b.height > 0) ? (
             <div className="vd-bars" role="img" aria-label="Revenue sales trend for the week">
               {bars.map((bar, index) => (
-                <div className="vd-bar-col" key={`${bar.day}-${index}`}>
+                <div
+                  className="vd-bar-col"
+                  key={`${bar.day}-${index}`}
+                  title={`${bar.day}: Rs. ${Number(bar.amount || 0).toLocaleString()} (${bar.orders || 0} orders)`}
+                >
                   <span className="vd-bar" style={{ height: `${Math.max(4, bar.height)}%` }} />
                   <small>{bar.day}</small>
                 </div>
@@ -1665,7 +1669,7 @@ export function VendorReports() {
                       <strong>{row.id}</strong>
                     </td>
                     <td>{row.customer}</td>
-                    <td>{row.date}</td>
+                    <td>{formatSalesDate(row.date)}</td>
                     <td>{row.amount}</td>
                     <td>
                       <span className={`vd-status ${(row.status || "").toLowerCase().replace(/\s+/g, "-")}`}>

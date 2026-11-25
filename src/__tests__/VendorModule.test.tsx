@@ -9,6 +9,7 @@ import {
   VendorCustomers,
   VendorSales,
   VendorReviews,
+  VendorReports,
 } from "../pages/vendor/VendorPages";
 import * as AccountContextModule from "../context/AccountContext";
 import { api } from "../api/client";
@@ -345,6 +346,63 @@ describe("Vendor Module UI & Empty States", () => {
     await waitFor(() => {
       expect(replySpy).toHaveBeenCalledWith(42, "Thank you Kiran! Harvested fresh from our hives.");
       expect(showToastMock).toHaveBeenCalledWith(expect.stringContaining("Reply published"));
+    });
+  });
+
+  describe("Requirement 8: Vendor Reports & Sales Analytics", () => {
+    it("renders real-time performance metrics and formatted transaction dates in Sales Analytics", async () => {
+      const reportsSpy = vi.spyOn(api, "vendorReports").mockResolvedValue({
+        range: "Last 30 Days",
+        grossRevenue: 3552,
+        netRevenue: 3552,
+        totalOrders: 4,
+        completedOrders: 2,
+        avgOrderValue: 888,
+        metrics: {
+          grossRevenue: 3552,
+          netRevenue: 3552,
+          totalOrders: 4,
+          completedOrders: 2,
+          avgOrderValue: 888,
+        },
+        bars: [
+          { day: "W", height: 100, amount: 1776, orders: 2 },
+          { day: "S", height: 8, amount: 0, orders: 0 },
+        ],
+        categories: [
+          { name: "General", sales: 3552, share: "100%", amount: "Rs. 3,552", width: "100%", color: "#176136", percentage: 100 },
+        ],
+        transactions: [
+          {
+            id: "GD-9158165c",
+            customer: "raman",
+            date: "2026-11-25T07:00:41.979Z",
+            amount: "Rs. 777",
+            status: "Delivered",
+          },
+        ],
+      });
+
+      render(
+        <MemoryRouter>
+          <VendorReports />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(reportsSpy).toHaveBeenCalledWith("Last 30 Days");
+        expect(screen.getByText("Rs. 3,552")).toBeInTheDocument();
+        expect(screen.getByText("Rs. 888")).toBeInTheDocument();
+        expect(screen.getByText("50%")).toBeInTheDocument();
+        expect(screen.getByText("2")).toBeInTheDocument();
+        expect(screen.getByText("4 orders received")).toBeInTheDocument();
+        expect(screen.getByText("Across 4 sales")).toBeInTheDocument();
+        expect(screen.getByText("2 orders delivered")).toBeInTheDocument();
+        expect(screen.getByText("Delivered to customers")).toBeInTheDocument();
+        // Verifies date formatting instead of raw ISO string
+        expect(screen.queryByText("2026-11-25T07:00:41.979Z")).not.toBeInTheDocument();
+        expect(screen.getByText(/Nov 25, 2026/i)).toBeInTheDocument();
+      });
     });
   });
 });
