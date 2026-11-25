@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import VendorHome from "../pages/vendor/VendorHome";
+import VendorShell from "../components/vendor/VendorShell";
 import {
   VendorProducts,
   VendorAddProduct,
@@ -402,6 +403,105 @@ describe("Vendor Module UI & Empty States", () => {
         // Verifies date formatting instead of raw ISO string
         expect(screen.queryByText("2026-11-25T07:00:41.979Z")).not.toBeInTheDocument();
         expect(screen.getByText(/Nov 25, 2026/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Requirement 9: Vendor Notifications & Mark as Read", () => {
+    it("displays unread count badge, allows viewing notifications, and removes badge on mark all as read", async () => {
+      localStorage.clear();
+      vi.spyOn(api, "vendorNotifications").mockResolvedValue([
+        {
+          id: "status-under-review",
+          text: "Your vendor account is currently under review by our administration team.",
+          to: "/vendor/profile",
+          type: "info",
+        },
+        {
+          id: "stock-apple",
+          text: "Apple is running low on stock (2 remaining).",
+          to: "/vendor/products",
+          type: "stock",
+        },
+      ]);
+      const markReadSpy = vi.spyOn(api, "vendorMarkNotificationsRead").mockResolvedValue({
+        success: true,
+        readIds: ["status-under-review", "stock-apple"],
+      });
+
+      render(
+        <MemoryRouter>
+          <VendorShell />
+        </MemoryRouter>
+      );
+
+      // Verify unread count badge is rendered initially
+      await waitFor(() => {
+        expect(screen.getByText("2")).toBeInTheDocument();
+      });
+
+      // Click bell to view notifications
+      const bellButton = screen.getByRole("button", { name: /2 unread notifications/i });
+      fireEvent.click(bellButton);
+
+      // Verify dropdown opened with notifications and Mark all as read button
+      await waitFor(() => {
+        expect(screen.getByText(/Notifications \(2\)/i)).toBeInTheDocument();
+        expect(screen.getByText("Apple is running low on stock (2 remaining).")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Mark all as read" })).toBeInTheDocument();
+      });
+
+      // Click Mark all as read
+      const markAllBtn = screen.getByRole("button", { name: "Mark all as read" });
+      fireEvent.click(markAllBtn);
+
+      // Verify notification badge is gone, number does not show, and empty state is rendered
+      await waitFor(() => {
+        expect(screen.queryByText("2")).not.toBeInTheDocument();
+        expect(screen.getByText("No new notifications")).toBeInTheDocument();
+        expect(screen.getByText("All caught up!")).toBeInTheDocument();
+        expect(markReadSpy).toHaveBeenCalledWith(["status-under-review", "stock-apple"]);
+      });
+    });
+
+    it("marks individual notification as read when clicking dismiss button", async () => {
+      localStorage.clear();
+      vi.spyOn(api, "vendorNotifications").mockResolvedValue([
+        {
+          id: "note-1",
+          text: "1 customer review awaits reply",
+          to: "/vendor/reviews",
+          type: "review",
+        },
+      ]);
+      vi.spyOn(api, "vendorMarkNotificationsRead").mockResolvedValue({
+        success: true,
+        readIds: ["note-1"],
+      });
+
+      render(
+        <MemoryRouter>
+          <VendorShell />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("1")).toBeInTheDocument();
+      });
+
+      const bell = screen.getByRole("button", { name: /1 unread notifications/i });
+      fireEvent.click(bell);
+
+      await waitFor(() => {
+        expect(screen.getByText("1 customer review awaits reply")).toBeInTheDocument();
+      });
+
+      const dismissBtn = screen.getByTitle("Mark as read");
+      fireEvent.click(dismissBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByText("1 customer review awaits reply")).not.toBeInTheDocument();
+        expect(screen.getByText("No new notifications")).toBeInTheDocument();
       });
     });
   });

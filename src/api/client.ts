@@ -117,6 +117,11 @@ export const api = {
   vendorReviews: () => request<VendorReviewsData>("/api/vendor/reviews"),
   vendorReplyReview: (id: number, reply: string) => request<{ id: number; reply: string; replyAt?: string }>(`/api/vendor/reviews/${id}/reply`, { method: "POST", body: JSON.stringify({ reply }) }),
   vendorNotifications: () => request<VendorNotification[]>("/api/vendor/notifications"),
+  vendorMarkNotificationsRead: (notificationIds?: string[]) =>
+    request<{ success: boolean; readIds: string[] }>("/api/vendor/notifications/read", {
+      method: "POST",
+      body: JSON.stringify({ notificationIds }),
+    }),
   vendorProfile: () => request<VendorProfileData>("/api/vendor/profile"),
   vendorUpdateProfile: (body: any) => request<VendorProfileData>("/api/vendor/profile", { method: "PUT", body: JSON.stringify(body) }),
   vendorUploadAvatar: (file: File) => {
@@ -1136,6 +1141,7 @@ export interface VendorNotification {
   text: string;
   to: string;
   type: string;
+  read?: boolean;
 }
 
 export interface VendorProfileData {
