@@ -10,6 +10,7 @@ import { postLoginPath, useAccount } from "../context/AccountContext";
 import { type AccountRole } from "../data/authOptions";
 import loginProduceImage from "../assets/images/login-produce.jpg";
 import { getFormErrorScrollHandler, scrollToElement } from "../utils/formErrorNavigation";
+import { customerStorefrontUrl } from "../utils/customerStorefrontUrl";
 
 const loginSchema = yup.object({
   identifier: yup
@@ -122,8 +123,7 @@ function Login() {
               type="button"
               className={role === "customer" ? "active" : ""}
               onClick={() => {
-                setRole("customer");
-                setServerError("");
+                window.location.assign(customerStorefrontUrl("/login"));
               }}
             >
               Customer
