@@ -228,6 +228,62 @@ describe("Vendor Module UI & Empty States", () => {
     });
   });
 
+  it("VendorSales computes real-time metrics and formatted dates directly from order transactions", async () => {
+    const todayIso = new Date().toISOString();
+    vi.spyOn(api, "vendorSales").mockResolvedValue({
+      transactions: [
+        {
+          id: "GD-9158",
+          customer: "raman",
+          items: "Apples x 1",
+          amount: 777,
+          payment: "Cash on Delivery (Paid)",
+          paymentMethod: "Cash on Delivery",
+          paymentStatus: "Paid",
+          date: todayIso,
+          status: "Delivered",
+        },
+        {
+          id: "GD-290d",
+          customer: "raman",
+          items: "Oranges x 1",
+          amount: 999,
+          payment: "Cash on Delivery (Pending)",
+          paymentMethod: "Cash on Delivery",
+          paymentStatus: "Pending",
+          date: todayIso,
+          status: "Preparing",
+        },
+        {
+          id: "GD-f70d",
+          customer: "raman",
+          items: "Rice x 1",
+          amount: 444,
+          payment: "Cash on Delivery (Pending)",
+          paymentMethod: "Cash on Delivery",
+          paymentStatus: "Pending",
+          date: todayIso,
+          status: "Pending",
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <VendorSales />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      // Today, Week, and Month all equal 2,220 since all orders occurred today
+      expect(screen.getAllByText("Rs. 2,220").length).toBe(3);
+      expect(screen.getByText("3 orders today")).toBeInTheDocument();
+      // Pending COD Payout = 999 + 444 = 1,443
+      expect(screen.getByText("Rs. 1,443")).toBeInTheDocument();
+      expect(screen.getByText("2 orders awaiting delivery")).toBeInTheDocument();
+    });
+  });
+
   it("VendorReviews allows vendor to reply to verified buyer reviews and saves to backend", async () => {
     vi.spyOn(api, "vendorReviews").mockResolvedValue({
       averageRating: 5.0,

@@ -58,9 +58,13 @@ import AdminLogin from "../../pages/admin/AdminLogin";
 function AdminShell() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoggedIn, user, logout } = useAccount();
+  const { isLoggedIn, loadingSession, user, logout } = useAccount();
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  if (loadingSession) {
+    return <main className="auth-gate-page" role="status">Checking admin session…</main>;
+  }
 
   if (!isLoggedIn || user.role !== "admin") {
     return <AdminLogin />;

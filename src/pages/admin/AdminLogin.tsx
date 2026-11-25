@@ -42,7 +42,7 @@ const adminRegisterSchema = yup.object().shape({
 
 export function AdminLogin() {
   const navigate = useNavigate();
-  const { isLoggedIn, user, login, registerAdmin, logout } = useAccount();
+  const { isLoggedIn, loadingSession, user, login, registerAdmin, logout } = useAccount();
 
   const [tab, setTab] = useState<"login" | "register">("login");
 
@@ -69,6 +69,24 @@ export function AdminLogin() {
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const [successNotice, setSuccessNotice] = useState("");
+
+  if (loadingSession) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #091e14 0%, #0d3822 50%, #041a10 100%)",
+          color: "#ffffff",
+          fontFamily: "inherit",
+        }}
+      >
+        <p>Checking admin authorization…</p>
+      </div>
+    );
+  }
 
   // If already logged in as admin, redirect to dashboard
   if (isLoggedIn && user.role === "admin") {

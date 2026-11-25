@@ -21,8 +21,9 @@ import {
 
 import { useAccount } from "../../context/AccountContext";
 import LogoMark from "../LogoMark";
-import { api } from "../../api/client";
+import { api, getToken } from "../../api/client";
 import type { VendorNotification } from "../../api/client";
+import { storefrontUrl } from "../../utils/storefrontUrl";
 
 const links = [
   { to: "/vendor", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -96,7 +97,10 @@ function VendorShell() {
   }
 
   if (user.role !== "vendor") {
-    return <Navigate to="/account" replace />;
+    const token = getToken();
+    const target = storefrontUrl(token ? `/account?auth_token=${encodeURIComponent(token)}` : "/login");
+    window.location.replace(target);
+    return null;
   }
 
   function closeMenu() {

@@ -1009,8 +1009,13 @@ export interface VendorSalesData {
   todaySales?: number;
   weeklySales?: number;
   monthlySales?: number;
+  totalSales?: number;
   completedOrders?: number;
   pendingPayout?: number;
+  todayOrdersCount?: number;
+  weeklyOrdersCount?: number;
+  monthlyOrdersCount?: number;
+  pendingPayoutCount?: number;
   metrics?: {
     todaySales: number;
     weeklySales: number;
@@ -1018,11 +1023,17 @@ export interface VendorSalesData {
     totalSales: number;
     completedOrders: number;
     pendingPayments: number;
+    pendingPayout?: number;
+    todayOrdersCount?: number;
+    weeklyOrdersCount?: number;
+    monthlyOrdersCount?: number;
+    pendingPayoutCount?: number;
     totalOrders: number;
   };
   transactions: {
     id: string;
     date: string;
+    createdAt?: string;
     customer: string;
     phone?: string;
     items?: string;
