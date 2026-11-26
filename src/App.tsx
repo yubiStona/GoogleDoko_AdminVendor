@@ -19,6 +19,7 @@ import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminPagesManager from "./pages/admin/AdminPagesManager";
 import AdminCategoriesManager from "./pages/admin/AdminCategoriesManager";
 import AdminContentHistory from "./pages/admin/AdminContentHistory";
+import OurStory from "./pages/OurStory";
 import NotFound from "./pages/NotFound";
 import PortalHome from "./pages/PortalHome";
 import VendorShell from "./components/vendor/VendorShell";
@@ -70,6 +71,7 @@ function App() {
                     <Route path="/signup/vendor/status" element={<VendorSignupStatus />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/our-story" element={<OurStory />} />
                     <Route path="/vendor/login" element={<Navigate to="/login?role=vendor" replace />} />
                     <Route path="/login/vendor" element={<Navigate to="/login?role=vendor" replace />} />
                     <Route path="/vendor" element={<VendorShell />}>

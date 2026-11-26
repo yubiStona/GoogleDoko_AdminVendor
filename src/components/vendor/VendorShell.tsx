@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   Bell,
+  Check,
   ClipboardList,
   Headphones,
   LayoutDashboard,
@@ -21,8 +22,9 @@ import {
 
 import { useAccount } from "../../context/AccountContext";
 import LogoMark from "../LogoMark";
-import { api } from "../../api/client";
+import { api, getToken } from "../../api/client";
 import type { VendorNotification } from "../../api/client";
+import { storefrontUrl } from "../../utils/storefrontUrl";
 
 const links = [
   { to: "/vendor", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -41,10 +43,21 @@ function VendorShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoggedIn, loadingSession, user, logout, showToast } = useAccount();
+  const bellRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [notifications, setNotifications] = useState<VendorNotification[]>([]);
+
+  const readStorageKey = `gd_vendor_read_notifications_${(user as any)?.id || user?.email || "vendor"}`;
+  const [readIds, setReadIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(readStorageKey);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     let active = true;
@@ -53,6 +66,17 @@ function VendorShell() {
         .then((res) => {
           if (active && Array.isArray(res)) {
             setNotifications(res);
+            // Sync any backend-marked read IDs
+            const backendRead = res.filter((n) => n.read).map((n) => n.id);
+            if (backendRead.length > 0) {
+              setReadIds((prev) => {
+                const merged = Array.from(new Set([...prev, ...backendRead]));
+                try {
+                  localStorage.setItem(readStorageKey, JSON.stringify(merged));
+                } catch {}
+                return merged;
+              });
+            }
           }
         })
         .catch(() => {
@@ -62,9 +86,54 @@ function VendorShell() {
     return () => {
       active = false;
     };
-  }, [isLoggedIn, user.role]);
+  }, [isLoggedIn, user.role, readStorageKey]);
 
-  const unreadCount = notifications.length;
+  // Mark specific notification IDs or all as read
+  const markAsRead = useCallback(
+    (idsToMark?: string[]) => {
+      setReadIds((prev) => {
+        const targetIds = idsToMark || notifications.map((n) => n.id);
+        const merged = Array.from(new Set([...prev, ...targetIds]));
+        try {
+          localStorage.setItem(readStorageKey, JSON.stringify(merged));
+        } catch {}
+        return merged;
+      });
+
+      if (api.vendorMarkNotificationsRead) {
+        api.vendorMarkNotificationsRead(idsToMark).catch(() => {});
+      }
+    },
+    [notifications, readStorageKey]
+  );
+
+  const markAllAsRead = useCallback(() => {
+    markAsRead(notifications.map((n) => n.id));
+  }, [markAsRead, notifications]);
+
+  // Handle outside click: when closing after viewing, mark current notifications as read
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
+        if (notesOpen) {
+          // Viewing finished - mark notifications as read so notification number does not show
+          markAllAsRead();
+          setNotesOpen(false);
+        }
+      }
+    }
+    if (notesOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [notesOpen, markAllAsRead]);
+
+  const unreadNotifications = notifications.filter(
+    (n) => !n.read && !readIds.includes(n.id)
+  );
+  const unreadCount = unreadNotifications.length;
   const vendorName =
     `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
     user.vendor?.businessName ||
@@ -96,7 +165,10 @@ function VendorShell() {
   }
 
   if (user.role !== "vendor") {
-    return <Navigate to="/account" replace />;
+    const token = getToken();
+    const target = storefrontUrl(token ? `/account?auth_token=${encodeURIComponent(token)}` : "/login");
+    window.location.replace(target);
+    return null;
   }
 
   function closeMenu() {
@@ -241,37 +313,74 @@ function VendorShell() {
             </button>
           </form>
           <div className="vd-top-right">
-            <div className="vd-bell-wrap">
+            <div className="vd-bell-wrap" ref={bellRef}>
               <button
                 type="button"
                 className="vd-bell"
-                aria-label={`${unreadCount} notifications`}
+                aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
                 aria-expanded={notesOpen}
-                onClick={() => setNotesOpen((open) => !open)}
+                onClick={() => {
+                  setNotesOpen((open) => {
+                    if (open && unreadCount > 0) {
+                      markAllAsRead();
+                    }
+                    return !open;
+                  });
+                }}
               >
                 <Bell size={18} />
                 {unreadCount > 0 ? <span className="vd-bell-count">{unreadCount}</span> : null}
               </button>
               {notesOpen ? (
                 <div className="vd-notes" role="menu">
-                  <strong>Notifications ({unreadCount})</strong>
-                  {notifications.length === 0 ? (
-                    <span className="vd-note-item" style={{ color: "#7a8c80", fontSize: 13, textAlign: "center", padding: "12px 8px" }}>
-                      No new notifications
-                    </span>
-                  ) : (
-                    notifications.map((note) => (
+                  <div className="vd-notes-head">
+                    <strong>Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}</strong>
+                    {unreadCount > 0 ? (
                       <button
                         type="button"
-                        className="vd-note-item"
-                        key={note.id}
-                        onClick={() => {
-                          setNotesOpen(false);
-                          navigate(note.to);
+                        className="vd-notes-mark-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAllAsRead();
                         }}
                       >
-                        {note.text}
+                        Mark all as read
                       </button>
+                    ) : null}
+                  </div>
+                  {unreadNotifications.length === 0 ? (
+                    <div className="vd-notes-empty">
+                      <Check size={16} color="#176136" />
+                      <span>No new notifications</span>
+                      <small>All caught up!</small>
+                    </div>
+                  ) : (
+                    unreadNotifications.map((note) => (
+                      <div className="vd-note-row" key={note.id}>
+                        <button
+                          type="button"
+                          className="vd-note-item"
+                          onClick={() => {
+                            markAsRead([note.id]);
+                            setNotesOpen(false);
+                            navigate(note.to);
+                          }}
+                        >
+                          {note.text}
+                        </button>
+                        <button
+                          type="button"
+                          className="vd-note-dismiss"
+                          aria-label={`Mark as read: ${note.text}`}
+                          title="Mark as read"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead([note.id]);
+                          }}
+                        >
+                          <Check size={14} />
+                        </button>
+                      </div>
                     ))
                   )}
                 </div>

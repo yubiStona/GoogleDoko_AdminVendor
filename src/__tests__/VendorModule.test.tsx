@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import VendorHome from "../pages/vendor/VendorHome";
+import VendorShell from "../components/vendor/VendorShell";
 import {
   VendorProducts,
   VendorAddProduct,
@@ -9,6 +10,7 @@ import {
   VendorCustomers,
   VendorSales,
   VendorReviews,
+  VendorReports,
 } from "../pages/vendor/VendorPages";
 import * as AccountContextModule from "../context/AccountContext";
 import { api } from "../api/client";
@@ -228,6 +230,62 @@ describe("Vendor Module UI & Empty States", () => {
     });
   });
 
+  it("VendorSales computes real-time metrics and formatted dates directly from order transactions", async () => {
+    const todayIso = new Date().toISOString();
+    vi.spyOn(api, "vendorSales").mockResolvedValue({
+      transactions: [
+        {
+          id: "GD-9158",
+          customer: "raman",
+          items: "Apples x 1",
+          amount: 777,
+          payment: "Cash on Delivery (Paid)",
+          paymentMethod: "Cash on Delivery",
+          paymentStatus: "Paid",
+          date: todayIso,
+          status: "Delivered",
+        },
+        {
+          id: "GD-290d",
+          customer: "raman",
+          items: "Oranges x 1",
+          amount: 999,
+          payment: "Cash on Delivery (Pending)",
+          paymentMethod: "Cash on Delivery",
+          paymentStatus: "Pending",
+          date: todayIso,
+          status: "Preparing",
+        },
+        {
+          id: "GD-f70d",
+          customer: "raman",
+          items: "Rice x 1",
+          amount: 444,
+          payment: "Cash on Delivery (Pending)",
+          paymentMethod: "Cash on Delivery",
+          paymentStatus: "Pending",
+          date: todayIso,
+          status: "Pending",
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <VendorSales />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      // Today, Week, and Month all equal 2,220 since all orders occurred today
+      expect(screen.getAllByText("Rs. 2,220").length).toBe(3);
+      expect(screen.getByText("3 orders today")).toBeInTheDocument();
+      // Pending COD Payout = 999 + 444 = 1,443
+      expect(screen.getByText("Rs. 1,443")).toBeInTheDocument();
+      expect(screen.getByText("2 orders awaiting delivery")).toBeInTheDocument();
+    });
+  });
+
   it("VendorReviews allows vendor to reply to verified buyer reviews and saves to backend", async () => {
     vi.spyOn(api, "vendorReviews").mockResolvedValue({
       averageRating: 5.0,
@@ -289,6 +347,162 @@ describe("Vendor Module UI & Empty States", () => {
     await waitFor(() => {
       expect(replySpy).toHaveBeenCalledWith(42, "Thank you Kiran! Harvested fresh from our hives.");
       expect(showToastMock).toHaveBeenCalledWith(expect.stringContaining("Reply published"));
+    });
+  });
+
+  describe("Requirement 8: Vendor Reports & Sales Analytics", () => {
+    it("renders real-time performance metrics and formatted transaction dates in Sales Analytics", async () => {
+      const reportsSpy = vi.spyOn(api, "vendorReports").mockResolvedValue({
+        range: "Last 30 Days",
+        grossRevenue: 3552,
+        netRevenue: 3552,
+        totalOrders: 4,
+        completedOrders: 2,
+        avgOrderValue: 888,
+        metrics: {
+          grossRevenue: 3552,
+          netRevenue: 3552,
+          totalOrders: 4,
+          completedOrders: 2,
+          avgOrderValue: 888,
+        },
+        bars: [
+          { day: "W", height: 100, amount: 1776, orders: 2 },
+          { day: "S", height: 8, amount: 0, orders: 0 },
+        ],
+        categories: [
+          { name: "General", sales: 3552, share: "100%", amount: "Rs. 3,552", width: "100%", color: "#176136", percentage: 100 },
+        ],
+        transactions: [
+          {
+            id: "GD-9158165c",
+            customer: "raman",
+            date: "2026-11-25T07:00:41.979Z",
+            amount: "Rs. 777",
+            status: "Delivered",
+          },
+        ],
+      });
+
+      render(
+        <MemoryRouter>
+          <VendorReports />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(reportsSpy).toHaveBeenCalledWith("Last 30 Days");
+        expect(screen.getByText("Rs. 3,552")).toBeInTheDocument();
+        expect(screen.getByText("Rs. 888")).toBeInTheDocument();
+        expect(screen.getByText("50%")).toBeInTheDocument();
+        expect(screen.getByText("2")).toBeInTheDocument();
+        expect(screen.getByText("4 orders received")).toBeInTheDocument();
+        expect(screen.getByText("Across 4 sales")).toBeInTheDocument();
+        expect(screen.getByText("2 orders delivered")).toBeInTheDocument();
+        expect(screen.getByText("Delivered to customers")).toBeInTheDocument();
+        // Verifies date formatting instead of raw ISO string
+        expect(screen.queryByText("2026-11-25T07:00:41.979Z")).not.toBeInTheDocument();
+        expect(screen.getByText(/Nov 25, 2026/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Requirement 9: Vendor Notifications & Mark as Read", () => {
+    it("displays unread count badge, allows viewing notifications, and removes badge on mark all as read", async () => {
+      localStorage.clear();
+      vi.spyOn(api, "vendorNotifications").mockResolvedValue([
+        {
+          id: "status-under-review",
+          text: "Your vendor account is currently under review by our administration team.",
+          to: "/vendor/profile",
+          type: "info",
+        },
+        {
+          id: "stock-apple",
+          text: "Apple is running low on stock (2 remaining).",
+          to: "/vendor/products",
+          type: "stock",
+        },
+      ]);
+      const markReadSpy = vi.spyOn(api, "vendorMarkNotificationsRead").mockResolvedValue({
+        success: true,
+        readIds: ["status-under-review", "stock-apple"],
+      });
+
+      render(
+        <MemoryRouter>
+          <VendorShell />
+        </MemoryRouter>
+      );
+
+      // Verify unread count badge is rendered initially
+      await waitFor(() => {
+        expect(screen.getByText("2")).toBeInTheDocument();
+      });
+
+      // Click bell to view notifications
+      const bellButton = screen.getByRole("button", { name: /2 unread notifications/i });
+      fireEvent.click(bellButton);
+
+      // Verify dropdown opened with notifications and Mark all as read button
+      await waitFor(() => {
+        expect(screen.getByText(/Notifications \(2\)/i)).toBeInTheDocument();
+        expect(screen.getByText("Apple is running low on stock (2 remaining).")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Mark all as read" })).toBeInTheDocument();
+      });
+
+      // Click Mark all as read
+      const markAllBtn = screen.getByRole("button", { name: "Mark all as read" });
+      fireEvent.click(markAllBtn);
+
+      // Verify notification badge is gone, number does not show, and empty state is rendered
+      await waitFor(() => {
+        expect(screen.queryByText("2")).not.toBeInTheDocument();
+        expect(screen.getByText("No new notifications")).toBeInTheDocument();
+        expect(screen.getByText("All caught up!")).toBeInTheDocument();
+        expect(markReadSpy).toHaveBeenCalledWith(["status-under-review", "stock-apple"]);
+      });
+    });
+
+    it("marks individual notification as read when clicking dismiss button", async () => {
+      localStorage.clear();
+      vi.spyOn(api, "vendorNotifications").mockResolvedValue([
+        {
+          id: "note-1",
+          text: "1 customer review awaits reply",
+          to: "/vendor/reviews",
+          type: "review",
+        },
+      ]);
+      vi.spyOn(api, "vendorMarkNotificationsRead").mockResolvedValue({
+        success: true,
+        readIds: ["note-1"],
+      });
+
+      render(
+        <MemoryRouter>
+          <VendorShell />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("1")).toBeInTheDocument();
+      });
+
+      const bell = screen.getByRole("button", { name: /1 unread notifications/i });
+      fireEvent.click(bell);
+
+      await waitFor(() => {
+        expect(screen.getByText("1 customer review awaits reply")).toBeInTheDocument();
+      });
+
+      const dismissBtn = screen.getByTitle("Mark as read");
+      fireEvent.click(dismissBtn);
+
+      await waitFor(() => {
+        expect(screen.queryByText("1 customer review awaits reply")).not.toBeInTheDocument();
+        expect(screen.getByText("No new notifications")).toBeInTheDocument();
+      });
     });
   });
 });

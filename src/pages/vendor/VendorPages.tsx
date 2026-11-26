@@ -1507,10 +1507,10 @@ export function VendorReports() {
   }, [range]);
 
   const metrics = useMemo(() => {
-    const rev = reportData?.grossRevenue || 0;
-    const orders = reportData?.totalOrders || 0;
-    const avg = reportData?.avgOrderValue || 0;
-    const completed = reportData?.completedOrders || 0;
+    const rev = reportData?.grossRevenue ?? reportData?.metrics?.grossRevenue ?? 0;
+    const orders = reportData?.totalOrders ?? reportData?.metrics?.totalOrders ?? 0;
+    const avg = reportData?.avgOrderValue ?? reportData?.metrics?.avgOrderValue ?? 0;
+    const completed = reportData?.completedOrders ?? reportData?.metrics?.completedOrders ?? 0;
     const completionRate = orders > 0 ? Math.round((completed / orders) * 100) : 0;
 
     return [
@@ -1596,7 +1596,11 @@ export function VendorReports() {
           {bars.length > 0 && bars.some((b) => b.height > 0) ? (
             <div className="vd-bars" role="img" aria-label="Revenue sales trend for the week">
               {bars.map((bar, index) => (
-                <div className="vd-bar-col" key={`${bar.day}-${index}`}>
+                <div
+                  className="vd-bar-col"
+                  key={`${bar.day}-${index}`}
+                  title={`${bar.day}: Rs. ${Number(bar.amount || 0).toLocaleString()} (${bar.orders || 0} orders)`}
+                >
                   <span className="vd-bar" style={{ height: `${Math.max(4, bar.height)}%` }} />
                   <small>{bar.day}</small>
                 </div>
@@ -1665,7 +1669,7 @@ export function VendorReports() {
                       <strong>{row.id}</strong>
                     </td>
                     <td>{row.customer}</td>
-                    <td>{row.date}</td>
+                    <td>{formatSalesDate(row.date)}</td>
                     <td>{row.amount}</td>
                     <td>
                       <span className={`vd-status ${(row.status || "").toLowerCase().replace(/\s+/g, "-")}`}>
@@ -1687,6 +1691,19 @@ export function VendorReports() {
       </section>
     </div>
   );
+}
+
+function formatSalesDate(dateStr?: string) {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function VendorSales() {
@@ -1735,43 +1752,136 @@ export function VendorSales() {
   const transactions = salesData?.transactions || [];
 
   const metrics = useMemo(() => {
-    const today = salesData?.todaySales || 0;
-    const week = salesData?.weeklySales || 0;
-    const month = salesData?.monthlySales || 0;
-    const pending = salesData?.pendingPayout || 0;
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    let calcToday = 0;
+    let calcTodayCount = 0;
+    let calcWeek = 0;
+    let calcWeekCount = 0;
+    let calcMonth = 0;
+    let calcMonthCount = 0;
+    let calcPending = 0;
+    let calcPendingCount = 0;
+
+    for (const tx of transactions) {
+      const isCancelled = String(tx.status || "").toLowerCase() === "cancelled";
+      if (isCancelled) continue;
+
+      const amt = Number(tx.amount || 0);
+      const d = new Date(tx.date || (tx as any).createdAt);
+      const hasValidDate = !isNaN(d.getTime());
+
+      if (hasValidDate) {
+        const isToday =
+          d.getFullYear() === now.getFullYear() &&
+          d.getMonth() === now.getMonth() &&
+          d.getDate() === now.getDate();
+
+        if (isToday) {
+          calcToday += amt;
+          calcTodayCount += 1;
+        }
+
+        if (d >= sevenDaysAgo) {
+          calcWeek += amt;
+          calcWeekCount += 1;
+        }
+
+        const isThisMonth =
+          d.getFullYear() === now.getFullYear() &&
+          d.getMonth() === now.getMonth();
+
+        if (isThisMonth || d >= thirtyDaysAgo) {
+          calcMonth += amt;
+          calcMonthCount += 1;
+        }
+      }
+
+      // Pending COD payout: COD orders awaiting customer delivery / payment collection
+      const isCod =
+        String(tx.paymentMethod || tx.payment || "").toLowerCase().includes("cod") ||
+        String(tx.paymentMethod || tx.payment || "").toLowerCase().includes("cash");
+      const isPending =
+        String(tx.paymentStatus || "").toLowerCase() === "pending" ||
+        String(tx.payment || "").toLowerCase().includes("pending") ||
+        !["delivered", "completed"].includes(String(tx.status || "").toLowerCase());
+
+      if (isCod && isPending) {
+        calcPending += amt;
+        calcPendingCount += 1;
+      }
+    }
+
+    const today =
+      transactions.length > 0
+        ? calcToday
+        : (salesData?.todaySales ?? salesData?.metrics?.todaySales ?? 0);
+    const todayCount =
+      transactions.length > 0
+        ? calcTodayCount
+        : (salesData?.todayOrdersCount ?? salesData?.metrics?.todayOrdersCount ?? (today > 0 ? 1 : 0));
+
+    const week =
+      transactions.length > 0
+        ? calcWeek
+        : (salesData?.weeklySales ?? salesData?.metrics?.weeklySales ?? 0);
+    const weekCount =
+      transactions.length > 0
+        ? calcWeekCount
+        : (salesData?.weeklyOrdersCount ?? salesData?.metrics?.weeklyOrdersCount ?? (week > 0 ? 1 : 0));
+
+    const month =
+      transactions.length > 0
+        ? calcMonth
+        : (salesData?.monthlySales ?? salesData?.metrics?.monthlySales ?? 0);
+    const monthCount =
+      transactions.length > 0
+        ? calcMonthCount
+        : (salesData?.monthlyOrdersCount ?? salesData?.metrics?.monthlyOrdersCount ?? (month > 0 ? 1 : 0));
+
+    const pending =
+      transactions.length > 0
+        ? calcPending
+        : (salesData?.pendingPayout ?? salesData?.metrics?.pendingPayout ?? 0);
+    const pendingCount =
+      transactions.length > 0
+        ? calcPendingCount
+        : (salesData?.pendingPayoutCount ?? salesData?.metrics?.pendingPayoutCount ?? (pending > 0 ? 1 : 0));
 
     return [
       {
         label: "Today's Sales",
         value: `Rs. ${today.toLocaleString()}`,
-        note: today > 0 ? "Real-time today's total" : "No orders today yet",
+        note: today > 0 ? `${todayCount} order${todayCount === 1 ? "" : "s"} today` : "No orders today yet",
         icon: TrendingUp,
         tone: "green",
       },
       {
         label: "This Week",
         value: `Rs. ${week.toLocaleString()}`,
-        note: "Last 7 days total",
+        note: weekCount > 0 ? `${weekCount} order${weekCount === 1 ? "" : "s"} in last 7 days` : "Last 7 days total",
         icon: Wallet,
         tone: "blue",
       },
       {
         label: "This Month",
         value: `Rs. ${month.toLocaleString()}`,
-        note: "Current month sales",
+        note: monthCount > 0 ? `${monthCount} order${monthCount === 1 ? "" : "s"} this month` : "Current month sales",
         icon: Diamond,
         tone: "lilac",
       },
       {
         label: "Pending COD Payout",
         value: `Rs. ${pending.toLocaleString()}`,
-        note: "Awaiting customer delivery",
+        note: pendingCount > 0 ? `${pendingCount} order${pendingCount === 1 ? "" : "s"} awaiting delivery` : "Awaiting customer delivery",
         icon: RotateCcw,
         tone: "pink",
         down: pending > 0,
       },
     ];
-  }, [salesData]);
+  }, [salesData, transactions]);
 
   const paymentMethods = useMemo(() => {
     const list = Array.from(new Set(transactions.map((t) => t.payment || t.paymentMethod).filter(Boolean)));
@@ -1805,7 +1915,7 @@ export function VendorSales() {
     const header = "Order ID,Customer,Items,Amount,Payment,Date,Status";
     const rows = filtered.map(
       (item) =>
-        `"${item.id}","${item.customer}","${item.items || "Produce Items"}",${item.amount},"${item.payment || item.paymentMethod || "COD"}","${item.date}","${item.status}"`,
+        `"${item.id}","${item.customer}","${item.items || "Produce Items"}",${item.amount},"${item.payment || item.paymentMethod || "COD"}","${formatSalesDate(item.date)}","${item.status}"`,
     );
     const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -1925,7 +2035,7 @@ export function VendorSales() {
                       <td>{item.items || "Farm Harvest Items"}</td>
                       <td>Rs. {Number(item.amount || 0).toLocaleString()}</td>
                       <td>{payStr}</td>
-                      <td>{item.date}</td>
+                      <td>{formatSalesDate(item.date)}</td>
                       <td>
                         <span className={`vd-status ${statusStr.toLowerCase().replace(/\s+/g, "-")}`}>
                           {statusStr}
@@ -1996,6 +2106,7 @@ export function VendorSales() {
         <VendorModal title={`Order ${selected.id}`} onClose={() => setSelected(null)}>
           <p>
             <strong>Customer:</strong> {selected.customer}
+            {selected.phone ? ` (${selected.phone})` : ""}
             <br />
             <strong>Items:</strong> {selected.items || "Farm Harvest Items"}
           </p>
@@ -2004,11 +2115,23 @@ export function VendorSales() {
             <br />
             <strong>Payment:</strong> {selected.payment || selected.paymentMethod || "COD"}
             <br />
-            <strong>Date:</strong> {selected.date} · <strong>Status:</strong> {selected.status}
+            <strong>Date:</strong> {formatSalesDate(selected.date)} · <strong>Status:</strong>{" "}
+            <span className={`vd-status ${(selected.status || "Pending").toLowerCase().replace(/\s+/g, "-")}`}>
+              {selected.status}
+            </span>
           </p>
-          <button type="button" className="vd-add-btn" onClick={() => setSelected(null)}>
-            Close
-          </button>
+          <div style={{ display: "flex", gap: "10px", marginTop: "1rem" }}>
+            <Link
+              to={`/vendor/orders?q=${encodeURIComponent(selected.id)}`}
+              className="vd-add-btn"
+              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+            >
+              Manage in Orders
+            </Link>
+            <button type="button" className="vd-secondary-btn" onClick={() => setSelected(null)}>
+              Close
+            </button>
+          </div>
         </VendorModal>
       ) : null}
     </div>
